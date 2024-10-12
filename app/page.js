@@ -11,34 +11,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Navbar from "@/components/Navbar";
 
 export default function Component() {
-  const [income, setIncome] = useState(() => {
-    const savedIncome = localStorage.getItem('income');
-    return savedIncome ? parseFloat(savedIncome) : 0;
-  });
-  const [transactions, setTransactions] = useState(() => {
-    const savedTransactions = localStorage.getItem('transactions');
-    return savedTransactions ? JSON.parse(savedTransactions) : [];
-  });
+  const [isClient, setIsClient] = useState(false);
+  const [income, setIncome] = useState(0);
+  const [transactions, setTransactions] = useState([]);
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
-  const [budgetLimit, setBudgetLimit] = useState(() => {
+  const [budgetLimit, setBudgetLimit] = useState(0);
+
+  useEffect(() => {
+    setIsClient(true);
+    const savedIncome = localStorage.getItem('income');
+    const savedTransactions = localStorage.getItem('transactions');
     const savedBudgetLimit = localStorage.getItem('budgetLimit');
-    return savedBudgetLimit ? parseFloat(savedBudgetLimit) : 0;
-  });
+
+    if (savedIncome) setIncome(parseFloat(savedIncome));
+    if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
+    if (savedBudgetLimit) setBudgetLimit(parseFloat(savedBudgetLimit));
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('income', income.toString());
-  }, [income]);
+    if (isClient) {
+      localStorage.setItem('income', income.toString());
+    }
+  }, [income, isClient]);
 
   useEffect(() => {
-    localStorage.setItem('transactions', JSON.stringify(transactions));
-  }, [transactions]);
+    if (isClient) {
+      localStorage.setItem('transactions', JSON.stringify(transactions));
+    }
+  }, [transactions, isClient]);
 
   useEffect(() => {
-    localStorage.setItem('budgetLimit', budgetLimit.toString());
-  }, [budgetLimit]);
+    if (isClient) {
+      localStorage.setItem('budgetLimit', budgetLimit.toString());
+    }
+  }, [budgetLimit, isClient]);
 
-  // Helper to generate a unique ID for each transaction
   const generateId = () => Math.floor(Math.random() * 100000);
 
   const addTransaction = (type) => {
@@ -49,7 +57,7 @@ export default function Component() {
         amount: parseFloat(amount),
         type,
       };
-      setTransactions([...transactions, newTransaction]);
+      setTransactions(prevTransactions => [...prevTransactions, newTransaction]);
       setCategory("");
       setAmount("");
 
@@ -63,7 +71,7 @@ export default function Component() {
     const transactionToDelete = transactions.find((t) => t.id === id);
     if (!transactionToDelete) return;
 
-    setTransactions(transactions.filter((t) => t.id !== id));
+    setTransactions(prevTransactions => prevTransactions.filter((t) => t.id !== id));
 
     if (transactionToDelete.type === "income") {
       setIncome(prevIncome => prevIncome - transactionToDelete.amount);
@@ -74,6 +82,10 @@ export default function Component() {
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
   const savings = income - totalExpenses;
+
+  if (!isClient) {
+    return <div>Loading...</div>; // Or any loading indicator
+  }
 
   return (
     <>
@@ -172,8 +184,8 @@ export default function Component() {
                   <progress className="w-full h-2 mt-2" value={totalExpenses} max={budgetLimit} />
                   <p className="text-sm mt-2">
                     {totalExpenses > budgetLimit
-                      ? `Over budget by ₹₹{(totalExpenses - budgetLimit).toFixed(2)}`
-                      : `Under budget by ₹₹{(budgetLimit - totalExpenses).toFixed(2)}`}
+                      ? `Over budget by ₹${(totalExpenses - budgetLimit).toFixed(2)}`
+                      : `Under budget by ₹${(budgetLimit - totalExpenses).toFixed(2)}`}
                   </p>
                 </div>
               )}
@@ -199,7 +211,7 @@ export default function Component() {
                       <span className="font-medium">{transaction.category}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className={`font-bold ₹{transaction.type === "income" ? "text-green-500" : "text-red-500"}`}>
+                      <span className={`font-bold ${transaction.type === "income" ? "text-green-500" : "text-red-500"}`}>
                         ₹{transaction.amount.toFixed(2)}
                       </span>
                       <Button variant="ghost" size="sm" onClick={() => deleteTransaction(transaction.id)}>
