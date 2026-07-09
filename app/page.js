@@ -1,230 +1,205 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { Plus, Minus, IndianRupee, CreditCard, Trash2 } from "lucide-react";
+import React from 'react';
+import Link from 'next/link';
+import { Calendar, ChevronLeft, ChevronRight, AlertTriangle, ArrowRight, ArrowDown, ArrowUp, BarChart } from 'lucide-react';
+import { useWallet } from '@/lib/WalletContext';
+import AccountsCard from '@/components/AccountsCard';
+import FinancialCharts from '@/components/FinancialCharts';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Navbar from "@/components/Navbar";
+export default function DashboardHome() {
+  const {
+    loading,
+    accounts,
+    transactions,
+    selectedMonth,
+    setSelectedMonth,
+    recurringRules,
+    saveAccount,
+    deleteAccount
+  } = useWallet();
 
-export default function Component() {
-  const [isClient, setIsClient] = useState(false);
-  const [income, setIncome] = useState(0);
-  const [transactions, setTransactions] = useState([]);
-  const [category, setCategory] = useState("");
-  const [amount, setAmount] = useState("");
-  const [budgetLimit, setBudgetLimit] = useState(0);
-
-  useEffect(() => {
-    setIsClient(true);
-    const savedIncome = localStorage.getItem('income');
-    const savedTransactions = localStorage.getItem('transactions');
-    const savedBudgetLimit = localStorage.getItem('budgetLimit');
-
-    if (savedIncome) setIncome(parseFloat(savedIncome));
-    if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
-    if (savedBudgetLimit) setBudgetLimit(parseFloat(savedBudgetLimit));
-  }, []);
-
-  useEffect(() => {
-    if (isClient) {
-      localStorage.setItem('income', income.toString());
-    }
-  }, [income, isClient]);
-
-  useEffect(() => {
-    if (isClient) {
-      localStorage.setItem('transactions', JSON.stringify(transactions));
-    }
-  }, [transactions, isClient]);
-
-  useEffect(() => {
-    if (isClient) {
-      localStorage.setItem('budgetLimit', budgetLimit.toString());
-    }
-  }, [budgetLimit, isClient]);
-
-  const generateId = () => Math.floor(Math.random() * 100000);
-
-  const addTransaction = (type) => {
-    if (category && amount) {
-      const newTransaction = {
-        id: generateId(),
-        category,
-        amount: parseFloat(amount),
-        type,
-      };
-      setTransactions(prevTransactions => [...prevTransactions, newTransaction]);
-      setCategory("");
-      setAmount("");
-
-      if (type === "income") {
-        setIncome(prevIncome => prevIncome + parseFloat(amount));
-      }
-    }
+  const formatCurrency = (val, showPlus = false) => {
+    const isNegative = val < 0;
+    const absVal = Math.abs(val);
+    const formatted = absVal.toLocaleString('en-IN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+    if (isNegative) return `-₹${formatted}`;
+    if (showPlus) return `+₹${formatted}`;
+    return `₹${formatted}`;
   };
 
-  const deleteTransaction = (id) => {
-    const transactionToDelete = transactions.find((t) => t.id === id);
-    if (!transactionToDelete) return;
+  // 1. Calculate active statistics
+  const netWorth = accounts.reduce((sum, acc) => sum + parseFloat(acc.balance || 0), 0);
 
-    setTransactions(prevTransactions => prevTransactions.filter((t) => t.id !== id));
+  // Transactions filtered by selected month
+  const monthlyTransactions = transactions.filter(t => t.date && t.date.startsWith(selectedMonth));
 
-    if (transactionToDelete.type === "income") {
-      setIncome(prevIncome => prevIncome - transactionToDelete.amount);
-    }
+  const monthlyIncome = monthlyTransactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+
+  const monthlyExpense = monthlyTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+
+  const monthlySavings = monthlyIncome - monthlyExpense;
+
+  // 2. Identify due bills
+  const todayStr = new Date().toISOString().split('T')[0];
+  const dueBillsCount = recurringRules.filter(r => r.is_active && r.next_due_date <= todayStr).length;
+
+  // Date controls
+  const handlePrevMonth = () => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const prevDate = new Date(year, month - 2, 1);
+    const y = prevDate.getFullYear();
+    const m = String(prevDate.getMonth() + 1).padStart(2, '0');
+    setSelectedMonth(`${y}-${m}`);
   };
 
-  const totalExpenses = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const savings = income - totalExpenses;
+  const handleNextMonth = () => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const nextDate = new Date(year, month, 1);
+    const y = nextDate.getFullYear();
+    const m = String(nextDate.getMonth() + 1).padStart(2, '0');
+    setSelectedMonth(`${y}-${m}`);
+  };
 
-  if (!isClient) {
-    return <div>Loading...</div>; // Or any loading indicator
+  const getMonthLabel = (monthStr) => {
+    const [year, month] = monthStr.split('-').map(Number);
+    const date = new Date(year, month - 1, 1);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  if (loading && accounts.length === 0) {
+    return (
+      <div className="container mx-auto p-6 max-w-6xl flex justify-center items-center h-[300px]">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
+          <span>Loading overview...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <>
-      <Navbar />
-      <IndianRupee />
-      <div className="container mx-auto p-4">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-          {/* Add Transaction Card */}
-          <Card className="invert rounded-[15px]">
-            <CardHeader>
-              <CardTitle>Add Transaction</CardTitle>
-              <CardDescription>Record your income or expenses</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="salary">Salary</SelectItem>
-                    <SelectItem value="food">Food</SelectItem>
-                    <SelectItem value="transport">Transport</SelectItem>
-                    <SelectItem value="utilities">Utilities</SelectItem>
-                    <SelectItem value="entertainment">Entertainment</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount</Label>
-                <Input
-                  id="amount"
-                  placeholder="Enter amount"
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button onClick={() => addTransaction("income")}>
-                <Plus className="mr-2 h-4 w-4" /> Add Income
-              </Button>
-              <Button onClick={() => addTransaction("expense")} variant="outline">
-                <Minus className="mr-2 h-4 w-4" /> Add Expense
-              </Button>
-            </CardFooter>
-          </Card>
+    <div className="container mx-auto p-4 sm:p-6 max-w-6xl space-y-6">
+      
+      {/* Due Bills Alert banner */}
+      {dueBillsCount > 0 && (
+        <div className="border border-black bg-black text-white p-3 flex justify-between items-center text-xs font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            <span>Notice: You have {dueBillsCount} recurring bill(s) due today or overdue.</span>
+          </div>
+          <Link href="/subscriptions" className="flex items-center gap-1 hover:underline">
+            Resolve Bills <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+      )}
 
-          {/* Financial Overview Card */}
-          <Card className="invert rounded-[15px]">
-            <CardHeader>
-              <CardTitle>Financial Overview</CardTitle>
-              <CardDescription>Your income, expenses, and savings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <p className="text-sm font-medium text-muted-foreground">Income</p>
-                  <p className="text-2xl font-bold text-green-600">₹{income.toFixed(2)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-muted-foreground">Expenses</p>
-                  <p className="text-2xl font-bold text-red-600">₹{totalExpenses.toFixed(2)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-muted-foreground">Savings</p>
-                  <p className="text-2xl font-bold text-blue-600">₹{savings.toFixed(2)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Date Switcher toolbar */}
+      <div className="border border-black bg-white p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider">
+          <Calendar className="h-4 w-4" />
+          <span>Dashboard Overview / {getMonthLabel(selectedMonth)}</span>
+        </div>
 
-          {/* Budget Planner Card */}
-          <Card className="invert rounded-[15px]">
-            <CardHeader>
-              <CardTitle>Budget Planner</CardTitle>
-              <CardDescription>Set and track your monthly budget</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="budget">Monthly Budget Limit</Label>
-                <Input
-                  id="budget"
-                  placeholder="Enter budget limit"
-                  type="number"
-                  value={budgetLimit || ""}
-                  onChange={(e) => setBudgetLimit(parseFloat(e.target.value))}
-                />
-              </div>
-              {budgetLimit > 0 && (
-                <div>
-                  <p className="text-sm font-medium">Budget Status</p>
-                  <progress className="w-full h-2 mt-2" value={totalExpenses} max={budgetLimit} />
-                  <p className="text-sm mt-2">
-                    {totalExpenses > budgetLimit
-                      ? `Over budget by ₹${(totalExpenses - budgetLimit).toFixed(2)}`
-                      : `Under budget by ₹${(budgetLimit - totalExpenses).toFixed(2)}`}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Transactions Card */}
-          <Card className="invert rounded-[15px]">
-            <CardHeader>
-              <CardTitle>Recent Transactions</CardTitle>
-              <CardDescription>Your latest financial activities</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-4">
-                {transactions.slice(-5).reverse().map((transaction) => (
-                  <li key={transaction.id} className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center">
-                      {transaction.type === "income" ? (
-                        <IndianRupee className="mr-2 h-5 w-4 text-green-500" />
-                      ) : (
-                        <CreditCard className="mr-2 h-5 w-5 text-red-500" />
-                      )}
-                      <span className="font-medium">{transaction.category}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className={`font-bold ${transaction.type === "income" ? "text-green-500" : "text-red-500"}`}>
-                        ₹{transaction.amount.toFixed(2)}
-                      </span>
-                      <Button variant="ghost" size="sm" onClick={() => deleteTransaction(transaction.id)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+        <div className="flex items-center border border-black bg-white">
+          <button
+            onClick={handlePrevMonth}
+            className="p-1 border-r border-black hover:bg-neutral-100 transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="text-[10px] font-black uppercase tracking-widest px-4 min-w-[120px] text-center">
+            {getMonthLabel(selectedMonth)}
+          </span>
+          <button
+            onClick={handleNextMonth}
+            className="p-1 border-l border-black hover:bg-neutral-100 transition-colors"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
       </div>
-    </>
+
+      {/* STATS HIGHLIGHTS PANEL (Stark high contrast) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Net Worth */}
+        <div className="stark-card-static p-5 flex flex-col justify-between h-24">
+          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1">
+            Net Worth (All-time)
+          </span>
+          <span className="text-2xl font-black tracking-tight num-mono leading-none">
+            {formatCurrency(netWorth)}
+          </span>
+          <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block mt-1">
+            Total ledger balance
+          </span>
+        </div>
+
+        {/* Income */}
+        <div className="stark-card-static p-5 flex flex-col justify-between h-24">
+          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1 flex items-center gap-1">
+            <ArrowUp className="h-3 w-3 text-black" /> Monthly Income
+          </span>
+          <span className="text-2xl font-black tracking-tight num-mono leading-none">
+            {formatCurrency(monthlyIncome, true)}
+          </span>
+          <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block mt-1">
+            {monthlyTransactions.filter(t => t.type === 'income').length} entries logged
+          </span>
+        </div>
+
+        {/* Expenses */}
+        <div className="stark-card-static p-5 flex flex-col justify-between h-24">
+          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1 flex items-center gap-1">
+            <ArrowDown className="h-3 w-3 text-black" /> Monthly Expenses
+          </span>
+          <span className="text-2xl font-black tracking-tight num-mono leading-none">
+            {formatCurrency(-monthlyExpense)}
+          </span>
+          <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block mt-1">
+            {monthlyTransactions.filter(t => t.type === 'expense').length} entries logged
+          </span>
+        </div>
+
+        {/* Savings */}
+        <div className="stark-card-static p-5 flex flex-col justify-between h-24">
+          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1">
+            Monthly Savings
+          </span>
+          <span className={`text-2xl font-black tracking-tight num-mono leading-none ${monthlySavings < 0 ? 'underline decoration-dotted decoration-neutral-500' : ''}`}>
+            {formatCurrency(monthlySavings, monthlySavings > 0)}
+          </span>
+          <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block mt-1">
+            Net cash balance
+          </span>
+        </div>
+      </div>
+
+      {/* CORE DISPLAY COLUMNS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Column: Account cards (lg:col-span-5) */}
+        <div className="lg:col-span-5">
+          <AccountsCard 
+            accounts={accounts} 
+            onSaveAccount={saveAccount} 
+            onDeleteAccount={deleteAccount} 
+          />
+        </div>
+
+        {/* Right Column: Graphs reports (lg:col-span-7) */}
+        <div className="lg:col-span-7">
+          <FinancialCharts transactions={monthlyTransactions} />
+        </div>
+
+      </div>
+
+    </div>
   );
 }

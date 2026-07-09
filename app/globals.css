@@ -2,24 +2,186 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #0a0a0a;
-}
-
 @layer base {
   :root {
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --bg-page: #fafafa;
+    --bg-card: #ffffff;
+    --bg-neutral: #f5f5f5;
+    --color-border: #000000;
+    --color-text: #000000;
+    --color-text-muted: #737373;
+    --color-btn-bg: #000000;
+    --color-btn-text: #ffffff;
+    --color-btn-sec-bg: #ffffff;
+    --color-btn-sec-text: #000000;
+    --shadow-color: 0, 0, 0;
   }
 
   .dark {
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --bg-page: #000000;
+    --bg-card: #0a0a0a;
+    --bg-neutral: #171717;
+    --color-border: #ffffff;
+    --color-text: #ffffff;
+    --color-text-muted: #a3a3a3;
+    --color-btn-bg: #ffffff;
+    --color-btn-text: #000000;
+    --color-btn-sec-bg: #000000;
+    --color-btn-sec-text: #ffffff;
+    --shadow-color: 255, 255, 255;
   }
 }
+
+body {
+  background-color: var(--bg-page);
+  color: var(--color-text);
+  font-family: var(--font-outfit), var(--font-inter), sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Stark Monochrome Design Utilities */
+.stark-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--color-border);
+  box-shadow: 2px 2px 0px 0px rgba(var(--shadow-color), 1);
+  transition: all 0.15s ease;
+}
+
+.stark-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px 0px rgba(var(--shadow-color), 1);
+}
+
+.stark-card-static {
+  background-color: var(--bg-card);
+  border: 1px solid var(--color-border);
+  box-shadow: 2px 2px 0px 0px rgba(var(--shadow-color), 1);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stark-btn {
+  background-color: var(--color-btn-bg);
+  color: var(--color-btn-text);
+  border: 1px solid var(--color-border);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.15s ease;
+}
+
+.stark-btn:hover:not(:disabled) {
+  background-color: var(--color-btn-sec-bg);
+  color: var(--color-btn-sec-text);
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0px 0px rgba(var(--shadow-color), 1);
+}
+
+.stark-btn:active:not(:disabled) {
+  transform: translate(0px, 0px);
+  box-shadow: 0px 0px 0px 0px rgba(var(--shadow-color), 1);
+}
+
+.stark-btn-secondary {
+  background-color: var(--color-btn-sec-bg);
+  color: var(--color-btn-sec-text);
+  border: 1px solid var(--color-border);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.15s ease;
+}
+
+.stark-btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-btn-bg);
+  color: var(--color-btn-text);
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0px 0px rgba(var(--shadow-color), 1);
+}
+
+.stark-input {
+  background-color: var(--bg-card);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 0px;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.stark-input:focus {
+  outline: 2px solid var(--color-border);
+  outline-offset: -2px;
+}
+
+.num-mono {
+  font-family: var(--font-inter), monospace;
+  font-feature-settings: "tnum";
+}
+
+/* Monochrome scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-card);
+  border-left: 1px solid var(--color-border);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  transition: background-color 0.2s ease;
+}
+
+/* Dark Mode Automatic Overrides for Stark B&W Theme */
+.dark .border-black {
+  border-color: var(--color-border) !important;
+}
+.dark .border-r-black {
+  border-right-color: var(--color-border) !important;
+}
+.dark .border-b-black {
+  border-bottom-color: var(--color-border) !important;
+}
+.dark .border-t-black {
+  border-top-color: var(--color-border) !important;
+}
+.dark .border-l-black {
+  border-left-color: var(--color-border) !important;
+}
+.dark .bg-white {
+  background-color: var(--bg-card) !important;
+}
+.dark .text-black {
+  color: var(--color-text) !important;
+}
+.dark .bg-neutral-50 {
+  background-color: var(--bg-neutral) !important;
+}
+.dark .bg-neutral-100 {
+  background-color: var(--bg-neutral) !important;
+}
+.dark .text-neutral-500 {
+  color: var(--color-text-muted) !important;
+}
+.dark .hover\:border-black:hover {
+  border-color: var(--color-border) !important;
+}
+.dark .hover\:bg-neutral-50:hover {
+  background-color: var(--bg-neutral) !important;
+}
+.dark .hover\:bg-neutral-100:hover {
+  background-color: var(--bg-neutral) !important;
+}
+.dark .shadow-\[1px_1px_0px_0px_rgba\(0\2c 0\2c 0\2c 1\)\] {
+  box-shadow: 1px 1px 0px 0px rgba(var(--shadow-color), 1) !important;
+}
+.dark .shadow-\[2px_2px_0px_0px_rgba\(0\2c 0\2c 0\2c 1\)\] {
+  box-shadow: 2px 2px 0px 0px rgba(var(--shadow-color), 1) !important;
+}
+.dark .shadow-\[3px_3px_0px_0px_rgba\(0\2c 0\2c 0\2c 1\)\] {
+  box-shadow: 3px 3px 0px 0px rgba(var(--shadow-color), 1) !important;
+}
+.dark .shadow-\[4px_4px_0px_0px_rgba\(0\2c 0\2c 0\2c 1\)\] {
+  box-shadow: 4px 4px 0px 0px rgba(var(--shadow-color), 1) !important;
+}
+
