@@ -13,10 +13,10 @@ The application features a striking **Stark Neobrutalist design system** charact
 *   **Visual Analytics**: Interactive Recharts-based breakdown representing income vs. expenses and category distribution.
 *   **Multi-Wallet Ledger**: Manage balances across multiple payment accounts (Cash, Bank Account, Credit Card).
 
-### 🤖 Intelligent AI Helpers (Gemini-Powered)
-*   **Quick AI Add**: Enter natural language commands (e.g. *"spent ₹250 on pizza from bank yesterday"*) to instantly populate transaction type, amount, category, date, and wallet.
-*   **OCR Receipt Scanner**: Upload receipt images; the AI vision model parses the total amount, merchant name, date, and items to fill the entry form automatically.
-*   **Conversational Assistant Workspace**: A dedicated chat space to ask questions about your ledger (e.g. *"How much did I spend on dining this week?"* or *"What is my budget compliance?"*).
+### 🤖 Intelligent AI Helpers (Groq & Gemini Powered)
+*   **Quick AI Add**: Enter natural language commands (e.g. *"spent ₹250 on pizza from bank yesterday"*) powered by Groq's superfast `llama-3.3-70b-versatile` model to instantly populate transaction type, amount, category, date, and wallet.
+*   **OCR Receipt Scanner**: Upload receipt images; Groq Vision (`llama-3.2-11b-vision-preview`) parses total amounts, store names, dates, and item descriptions.
+*   **Conversational Assistant Workspace**: A dedicated chat space to ask questions about your ledger (e.g. *"How much did I spend on dining this week?"*).
 
 ### ⚡ Resilient Offline Fallback Engines
 *   **Offline Parser**: If your Gemini API key hits Google rate limits (`429 Resource Exhausted` / `limit: 0`), the backend catches the error and executes a local regex keyword parser to auto-fill the transaction.

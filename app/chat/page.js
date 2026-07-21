@@ -5,6 +5,7 @@ import { useWallet } from '@/lib/WalletContext';
 import { Sparkles, Send, Loader2, Bot, User, HelpCircle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import MarkdownMessage from '@/components/MarkdownMessage';
 
 const SUGGESTIONS = [
   "How much did I spend on food this month?",
@@ -77,41 +78,47 @@ export default function ChatPage() {
       </div>
 
       {/* Main Conversation Container */}
-      <div className="flex-1 border border-black bg-white flex flex-col overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+      <div className="flex-1 border border-black dark:border-white bg-white dark:bg-black flex flex-col overflow-hidden shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
         
         {/* Messages list */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((msg, index) => (
             <div
               key={index}
-              className={`flex gap-3 max-w-[85%] ${
+              className={`flex gap-3 max-w-[92%] sm:max-w-[85%] ${
                 msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''
               }`}
             >
-              <div className={`h-8 w-8 shrink-0 flex items-center justify-center border border-black font-bold text-xs ${
-                msg.role === 'user' ? 'bg-black text-white' : 'bg-neutral-100 text-black'
+              <div className={`h-8 w-8 shrink-0 flex items-center justify-center border border-black dark:border-white font-bold text-xs ${
+                msg.role === 'user' 
+                  ? 'bg-black text-white dark:bg-white dark:text-black' 
+                  : 'bg-neutral-100 text-black dark:bg-neutral-900 dark:text-white'
               }`}>
                 {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
               </div>
               
-              <div className={`p-4 border border-black text-xs leading-relaxed ${
+              <div className={`p-3.5 sm:p-4 border border-black dark:border-white text-xs leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(150,150,150,0.2)]'
-                  : 'bg-neutral-50 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                  ? 'bg-black dark:bg-white text-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] font-medium'
+                  : 'bg-neutral-50 dark:bg-neutral-900/90 text-black dark:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] flex-1 overflow-hidden'
               }`}>
-                <p className="whitespace-pre-line">{msg.content}</p>
+                {msg.role === 'user' ? (
+                  <p className="whitespace-pre-line text-xs font-semibold">{msg.content}</p>
+                ) : (
+                  <MarkdownMessage content={msg.content} />
+                )}
               </div>
             </div>
           ))}
 
           {loading && (
             <div className="flex gap-3 max-w-[85%] animate-pulse">
-              <div className="h-8 w-8 border border-black bg-neutral-100 flex items-center justify-center text-black">
+              <div className="h-8 w-8 border border-black dark:border-white bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-black dark:text-white">
                 <Bot className="h-4 w-4" />
               </div>
-              <div className="p-4 border border-black bg-neutral-50 text-black text-xs flex items-center gap-2">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span>Analyzing ledger patterns...</span>
+              <div className="p-4 border border-black dark:border-white bg-neutral-50 dark:bg-neutral-900 text-black dark:text-white text-xs flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-black dark:text-white" />
+                <span className="font-bold">Analyzing ledger patterns with Groq AI...</span>
               </div>
             </div>
           )}

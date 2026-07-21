@@ -46,10 +46,7 @@ Here is a local calculation of your transactions for the current month:
 *   **Wallet Balances**: **${fmt(totalBalance)}**
 
 **Category Breakdown:**
-${breakdown || 'No expenses recorded this month.'}
-
----
-*Note: Your Gemini API Key returned a quota error (429). I calculated these stats offline using your local ledger database. Enable billing in Google AI Studio to unlock natural conversation.*`;
+${breakdown || 'No expenses recorded this month.'}`;
   }
   
   if (query.includes('budget') || query.includes('limit') || query.includes('over')) {
@@ -57,7 +54,7 @@ ${breakdown || 'No expenses recorded this month.'}
       const spent = categoryExpenses[b.category] || 0;
       const limit = parseFloat(b.limit_amount) || 0;
       const percent = limit > 0 ? (spent / limit) * 100 : 0;
-      const status = percent >= 100 ? '🔴 Over' : percent >= 80 ? '专 Warning' : '🟢 Safe';
+      const status = percent >= 100 ? '🔴 Over' : percent >= 80 ? '🟡 Warning' : '🟢 Safe';
       return `| **${b.category.toUpperCase()}** | ${fmt(limit)} | ${fmt(spent)} | ${status} (${percent.toFixed(0)}%) |`;
     }).join('\n');
 
@@ -66,38 +63,17 @@ Here is your budget status relative to your expenses this month:
 
 | Category | Budget Limit | Spent | Status |
 | :--- | :--- | :--- | :--- |
-${rows || '| No budgets configured | - | - | - |'}
-
----
-*Note: Your Gemini API Key returned a quota error (429). I computed these stats offline using your local ledger database.*`;
-  }
-  
-  if (query.includes('saving') || query.includes('tip') || query.includes('advice') || query.includes('help')) {
-    const highestCat = Object.entries(categoryExpenses).sort((a,b) => b[1] - a[1])[0];
-    const highestCatStr = highestCat ? `Your highest category expense is in **${highestCat[0].toUpperCase()}**. Try cutting back on non-essential purchases here.` : 'Analyze your largest category expenses and set budget alerts for them.';
-    const savingsRate = totalIncome > 0 ? ((netSavings / totalIncome) * 100).toFixed(0) : '0';
-
-    return `### 💡 Saving Recommendations (Offline Fallback)
-Based on your local transaction history, here are 3 financial tips:
-
-1.  **Monitor Category Spending**: ${highestCatStr}
-2.  **Aim for a 20% Savings Rate**: Your current savings rate is **${savingsRate}%**. Try to keep expenses below 80% of your incoming salary.
-3.  **Review Subscriptions**: Audit your recurring payments and terminate any services you have not used in the last 30 days.
-
----
-*Note: Your Gemini API Key returned a quota error (429). These tips are generated offline by the local advisor fallback.*`;
+${rows || '| No budgets configured | - | - | - |'}`;
   }
 
   return `### 💼 Wallet Overview (Offline Fallback)
-Your Gemini API Key returned a quota error (429), so I processed your query using your local ledger database:
+Here is a summary from your local ledger database:
 
 *   **Total Available Balances**: **${fmt(totalBalance)}**
     ${accounts.map(a => `- **${a.name}**: ${fmt(a.balance)}`).join('\n')}
 
 *   **Recent Transactions**:
-    ${transactions.slice(0, 5).map(t => `- [${t.date}] **${t.description || t.category}**: ${t.type === 'expense' ? '-' : '+'}₹${t.amount}`).join('\n') || 'No transactions recorded yet.'}
-
-How else can I help you check your ledger balances? (Or configure your Gemini API Key billing in Google AI Studio to unlock conversational chats!)`;
+    ${transactions.slice(0, 5).map(t => `- [${t.date}] **${t.description || t.category}**: ${t.type === 'expense' ? '-' : '+'}₹${t.amount}`).join('\n') || 'No transactions recorded yet.'}`;
 }
 
 export async function POST(req) {
@@ -110,13 +86,15 @@ export async function POST(req) {
 
     const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content || '';
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const groqApiKey = process.env.GROQ_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    const apiKey = groqApiKey || geminiApiKey;
+
     if (!apiKey) {
       const fallbackReply = localChatAdvisorFallback(lastUserMessage, transactions, budgets, accounts);
       return NextResponse.json({ reply: fallbackReply });
     }
 
-    // Prepare financial context
     const accountsCtx = accounts
       ? accounts.map(a => `- ${a.name} (${a.type}): ₹${parseFloat(a.balance).toFixed(2)}`).join('\n')
       : 'No accounts data';
@@ -125,10 +103,9 @@ export async function POST(req) {
       ? budgets.map(b => `- ${b.category}: Limit ₹${parseFloat(b.limit_amount).toFixed(2)}`).join('\n')
       : 'No budgets configured';
 
-    // Format transactions concisely to save tokens
     const recentTransactions = transactions
       ? transactions.slice(0, 100).map(t => 
-          `[${t.date}] ${t.type.toUpperCase()}: ₹${t.amount} in '${t.category}' - ${t.description || 'No desc'} (Account ID: ${t.account_id}${t.to_account_id ? `, To: ${t.to_account_id}` : ''})`
+          `[${t.date}] ${t.type.toUpperCase()}: ₹${t.amount} in '${t.category}' - ${t.description || 'No desc'}`
         ).join('\n')
       : 'No transactions recorded';
 
@@ -150,58 +127,79 @@ Guidelines for responding:
 2. Always refer to currencies in Indian Rupee (₹).
 3. If they ask about their total spending, compute it from the transactions list provided.
 4. If they ask about budget compliance, compare recent transaction categories against their budgets.
-5. Base all answers strictly on the user's provided data. If they ask about things outside their data, gently guide them back to their finances.
-6. Provide actionable recommendations (e.g., "You have spent 85% of your food budget, try to cook at home this week").
-7. Do not mention that you received this data as a system context. Act as if you naturally have access to their secure ledger.`;
-
-    // Map message roles for Gemini: 'user' remains 'user', 'assistant' maps to 'model'
-    const geminiContents = messages.map(m => {
-      const role = m.role === 'assistant' ? 'model' : 'user';
-      return {
-        role: role,
-        parts: [{ text: m.content }]
-      };
-    });
-
-    // Insert the system prompt at the very beginning of contents
-    geminiContents.unshift({
-      role: 'user',
-      parts: [{ text: `SYSTEM CONTEXT: ${systemPrompt}\n\nUnderstood. I will help the user analyze this data.` }]
-    }, {
-      role: 'model',
-      parts: [{ text: 'Greetings! I am your My Wallet AI Assistant. How can I help you analyze your finances today?' }]
-    });
+5. Base all answers strictly on the user's provided data.
+6. Provide actionable recommendations.`;
 
     let reply;
+    const isGroq = groqApiKey || apiKey.startsWith('gsk_');
+
     try {
-      // Call Gemini API
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
+      if (isGroq) {
+        // Groq API with llama-3.3-70b-versatile
+        const groqMessages = [
+          { role: 'system', content: systemPrompt },
+          ...messages.map(m => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.content
+          }))
+        ];
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            contents: geminiContents,
-          }),
+            model: 'llama-3.3-70b-versatile',
+            messages: groqMessages,
+            temperature: 0.5
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.warn(`Groq Chat error ${response.status}: ${errorText}. Using fallback.`);
+          reply = localChatAdvisorFallback(lastUserMessage, transactions, budgets, accounts);
+        } else {
+          const resData = await response.json();
+          reply = resData.choices?.[0]?.message?.content;
+          if (!reply) throw new Error('Invalid response from Groq API');
         }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.warn(`Gemini Chat API returned error: ${response.status} - ${errorText}. Using offline advisor fallback.`);
-        reply = localChatAdvisorFallback(lastUserMessage, transactions, budgets, accounts);
       } else {
-        const resData = await response.json();
-        reply = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+        // Gemini API
+        const geminiContents = messages.map(m => ({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }]
+        }));
 
-        if (!reply) {
-          throw new Error('Invalid response from Gemini API');
+        geminiContents.unshift({
+          role: 'user',
+          parts: [{ text: `SYSTEM CONTEXT: ${systemPrompt}` }]
+        }, {
+          role: 'model',
+          parts: [{ text: 'Greetings! I am your My Wallet AI Assistant. How can I help you analyze your finances today?' }]
+        });
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: geminiContents })
+          }
+        );
+
+        if (!response.ok) {
+          reply = localChatAdvisorFallback(lastUserMessage, transactions, budgets, accounts);
+        } else {
+          const resData = await response.json();
+          reply = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!reply) throw new Error('Invalid response from Gemini API');
         }
       }
     } catch (apiErr) {
-      console.warn("Exception during Gemini Chat, using offline advisor fallback:", apiErr.message);
+      console.warn("Exception during Chat AI, using fallback:", apiErr.message);
       reply = localChatAdvisorFallback(lastUserMessage, transactions, budgets, accounts);
     }
 

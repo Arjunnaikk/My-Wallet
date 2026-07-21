@@ -14,13 +14,11 @@ function basicFallbackParse(text) {
     is_fallback: true
   };
 
-  // 1. Extract amount
   const amountMatch = text.match(/(?:rs\.?|inr|₹|\$)?\s*(\d+(?:\.\d{1,2})?)/i);
   if (amountMatch) {
     result.amount = parseFloat(amountMatch[1]);
   }
 
-  // 2. Determine transaction type
   const textLower = text.toLowerCase();
   if (textLower.includes('received') || textLower.includes('got') || textLower.includes('salary') || textLower.includes('income')) {
     result.type = 'income';
@@ -32,7 +30,6 @@ function basicFallbackParse(text) {
     result.description = 'Funds Transfer';
   }
 
-  // 3. Parse category keywords
   if (textLower.includes('pizza') || textLower.includes('food') || textLower.includes('restaurant') || textLower.includes('dinner') || textLower.includes('lunch') || textLower.includes('burger') || textLower.includes('swiggy') || textLower.includes('zomato') || textLower.includes('eat')) {
     result.category = 'food';
     result.description = 'Food / Restaurant';
@@ -53,14 +50,12 @@ function basicFallbackParse(text) {
     result.description = 'Shopping Purchase';
   }
 
-  // 4. Determine source wallet
   if (textLower.includes('cash')) {
     result.source_account = 'cash';
   } else if (textLower.includes('bank') || textLower.includes('gpay') || textLower.includes('upi') || textLower.includes('card')) {
     result.source_account = 'bank';
   }
 
-  // 5. Clean description
   const cleanMatch = text.match(/(?:spent|on|for|from|at)\s+([a-zA-Z\s]+)(?:\s+(?:rs|₹|\$|\d)|$)/i);
   if (cleanMatch && cleanMatch[1] && cleanMatch[1].trim().length > 2) {
     const desc = cleanMatch[1].trim();
@@ -78,7 +73,10 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Text prompt is required' }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const groqApiKey = process.env.GROQ_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    const apiKey = groqApiKey || geminiApiKey;
+
     if (!apiKey) {
       return NextResponse.json(basicFallbackParse(text));
     }
@@ -112,45 +110,63 @@ Rules:
 7. Return ONLY the JSON object. Do not wrap it in markdown code blocks.`;
 
     let parsedTransaction;
+    const isGroq = groqApiKey || apiKey.startsWith('gsk_');
+
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
+      if (isGroq) {
+        // Call Groq API with llama-3.3-70b-versatile
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: systemPrompt },
-                  { text: `Parse this transaction: "${text}"` }
-                ]
-              }
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: `Parse this transaction: "${text}"` }
             ],
-            generation_config: {
-              response_mime_type: 'application/json',
-            }
-          }),
-        }
-      );
+            response_format: { type: 'json_object' },
+            temperature: 0.1
+          })
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.warn(`Gemini API returned error code ${response.status}: ${errorText}. Falling back to offline parse.`);
-        parsedTransaction = basicFallbackParse(text);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.warn(`Groq API error ${response.status}: ${errorText}. Using fallback.`);
+          parsedTransaction = basicFallbackParse(text);
+        } else {
+          const resData = await response.json();
+          const outputText = resData.choices?.[0]?.message?.content;
+          if (!outputText) throw new Error('Invalid response from Groq API');
+          parsedTransaction = JSON.parse(outputText);
+        }
       } else {
-        const resData = await response.json();
-        const outputText = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+        // Call Gemini API
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: systemPrompt }, { text: `Parse this transaction: "${text}"` }] }],
+              generation_config: { response_mime_type: 'application/json' }
+            })
+          }
+        );
 
-        if (!outputText) {
-          throw new Error('Invalid response from Gemini API');
+        if (!response.ok) {
+          parsedTransaction = basicFallbackParse(text);
+        } else {
+          const resData = await response.json();
+          const outputText = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!outputText) throw new Error('Invalid response from Gemini API');
+          parsedTransaction = JSON.parse(outputText);
         }
-        parsedTransaction = JSON.parse(outputText);
       }
     } catch (apiErr) {
-      console.warn("Exception calling Gemini API, using offline fallback:", apiErr.message);
+      console.warn("Exception calling AI API, using offline fallback:", apiErr.message);
       parsedTransaction = basicFallbackParse(text);
     }
 

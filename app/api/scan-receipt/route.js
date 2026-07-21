@@ -10,14 +10,16 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Image is required' }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const groqApiKey = process.env.GROQ_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    const apiKey = groqApiKey || geminiApiKey;
+
     if (!apiKey) {
       return NextResponse.json({
-        error: 'GEMINI_API_KEY is not configured in .env.local'
+        error: 'Neither GROQ_API_KEY nor GEMINI_API_KEY is configured in .env.local'
       }, { status: 500 });
     }
 
-    // Strip out base64 prefixes if present
     const regex = /^data:(image\/\w+);base64,(.*)$/;
     const matches = image.match(regex);
     let mimeType = 'image/jpeg';
@@ -45,52 +47,91 @@ Return a JSON object conforming strictly to this structure:
 Rules:
 1. "amount" must be the grand total of the receipt as a positive number.
 2. "description" should be the name of the store, merchant, or service provider (capitalized).
-3. Guess the best category (e.g. restaurant/grocery -> "food", bus/taxi -> "transport", clothes/electronics -> "shopping", movie -> "entertainment").
+3. Guess the best category.
 4. "items" should list up to 5 main items printed on the receipt.
-5. Return ONLY the JSON object. Do not wrap it in markdown code blocks.`;
+5. Return ONLY the JSON object.`;
 
-    // Call Gemini API with multimodal vision capabilities
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
+    let parsedReceipt;
+    const isGroq = groqApiKey || apiKey.startsWith('gsk_');
+
+    if (isGroq) {
+      // Call Groq Vision API (llama-3.2-11b-vision-preview)
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          contents: [
+          model: 'llama-3.2-11b-vision-preview',
+          messages: [
             {
-              parts: [
-                { text: promptText },
+              role: 'user',
+              content: [
+                { type: 'text', text: promptText },
                 {
-                  inlineData: {
-                    mimeType: mimeType,
-                    data: base64Data
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${mimeType};base64,${base64Data}`
                   }
                 }
               ]
             }
           ],
-          generation_config: {
-            response_mime_type: 'application/json',
-          }
-        }),
+          response_format: { type: 'json_object' },
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Groq Vision API error: ${response.status} - ${errorText}`);
       }
-    );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+      const resData = await response.json();
+      const outputText = resData.choices?.[0]?.message?.content;
+
+      if (!outputText) {
+        throw new Error('Invalid response from Groq Vision API');
+      }
+
+      parsedReceipt = JSON.parse(outputText);
+    } else {
+      // Gemini API
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: promptText },
+                  { inlineData: { mimeType: mimeType, data: base64Data } }
+                ]
+              }
+            ],
+            generation_config: { response_mime_type: 'application/json' }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+      }
+
+      const resData = await response.json();
+      const outputText = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!outputText) {
+        throw new Error('Invalid response from Gemini API');
+      }
+
+      parsedReceipt = JSON.parse(outputText);
     }
 
-    const resData = await response.json();
-    const outputText = resData.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!outputText) {
-      throw new Error('Invalid response from Gemini API');
-    }
-
-    const parsedReceipt = JSON.parse(outputText);
     return NextResponse.json(parsedReceipt);
   } catch (error) {
     console.error('Receipt Scan error:', error);
