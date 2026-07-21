@@ -68,7 +68,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 max-w-3xl space-y-6 flex flex-col h-[calc(100vh-100px)]">
+    <div className="container mx-auto px-3 pt-4 pb-36 sm:p-6 max-w-3xl space-y-5 sm:space-y-6 flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-100px)]">
       
       {/* Title Header */}
       <div className="border border-black bg-white p-4 flex items-center gap-2 text-xs font-black uppercase tracking-wider shrink-0">

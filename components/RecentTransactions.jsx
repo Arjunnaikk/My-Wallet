@@ -274,17 +274,17 @@ const RecentTransactions = ({ transactions, accounts, onUpdateTransaction, onDel
                     {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}₹{parseFloat(tx.amount).toFixed(2)}
                   </span>
                   
-                  <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  <div className="flex gap-1.5 shrink-0">
                     <button
                       onClick={() => handleStartEdit(tx)}
-                      className="text-neutral-400 hover:text-black p-1 hover:bg-neutral-100 transition-colors"
+                      className="border border-black bg-white text-black p-1 shadow-sm transition-transform active:scale-95"
                       title="Edit Entry"
                     >
                       <Edit3 className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => handleDelete(tx.id)}
-                      className="text-neutral-400 hover:text-black p-1 hover:bg-neutral-100 transition-colors"
+                      className="border border-black bg-white text-black p-1 shadow-sm transition-transform active:scale-95"
                       title="Delete Entry"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

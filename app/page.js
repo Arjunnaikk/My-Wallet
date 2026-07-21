@@ -85,7 +85,7 @@ export default function DashboardHome() {
   }
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 max-w-6xl space-y-6">
+    <div className="container mx-auto px-3 pt-4 pb-36 sm:p-6 max-w-6xl space-y-5 sm:space-y-6">
       
       {/* Due Bills Alert banner */}
       {dueBillsCount > 0 && (

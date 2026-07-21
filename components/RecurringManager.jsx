@@ -208,10 +208,10 @@ const RecurringManager = ({ accounts, recurringRules, onSaveRule, onDeleteRule, 
               </div>
               <button
                 onClick={() => onDeleteRule(rule.id)}
-                className="text-neutral-400 hover:text-black opacity-0 group-hover:opacity-100 transition-opacity"
+                className="border border-black bg-white text-black p-1 shadow-sm transition-transform active:scale-95 shrink-0"
                 title="Remove Schedule"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           ))

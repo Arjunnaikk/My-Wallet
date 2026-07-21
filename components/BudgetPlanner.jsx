@@ -159,17 +159,17 @@ const BudgetPlanner = ({ budgets, transactions, onSaveBudget, onDeleteBudget }) 
                         <span className="font-black text-xs num-mono">₹{actual.toFixed(0)}</span>
                         <span className="text-[10px] text-neutral-400 font-bold num-mono"> / ₹{limit.toFixed(0)}</span>
                       </div>
-                      <div className="flex gap-1.5 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <div className="flex gap-1.5 shrink-0">
                         <button 
                           onClick={() => handleStartEdit(bgt)}
-                          className="text-neutral-400 hover:text-black"
+                          className="border border-black bg-white text-black p-1 shadow-sm transition-transform active:scale-95"
                           title="Edit Limit"
                         >
                           <Edit2 className="h-3 w-3" />
                         </button>
                         <button 
                           onClick={() => onDeleteBudget(bgt.id)}
-                          className="text-neutral-400 hover:text-black"
+                          className="border border-black bg-white text-black p-1 shadow-sm transition-transform active:scale-95"
                           title="Remove"
                         >
                           <Trash2 className="h-3 w-3" />

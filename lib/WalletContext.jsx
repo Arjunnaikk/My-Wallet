@@ -234,14 +234,14 @@ export const WalletProvider = ({ children }) => {
       importTransactions: handleImportTransactions,
       reloadData: () => loadData(user?.id)
     }}>
-      <div className="min-h-screen bg-[#fafafa] dark:bg-black text-black dark:text-white flex flex-col pb-20 md:pb-12 transition-colors duration-200">
+      <div className="min-h-screen bg-[#fafafa] dark:bg-black text-black dark:text-white flex flex-col transition-colors duration-200">
         <Navbar 
           user={user} 
           onLoginClick={() => setIsAuthOpen(true)} 
           onLogout={handleLogout} 
           syncStatus={syncStatus} 
         />
-        <main className="flex-grow">
+        <main className="flex-grow pb-28 md:pb-12">
           {children}
         </main>
       </div>

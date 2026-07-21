@@ -157,7 +157,7 @@ const AccountsCard = ({ accounts, onSaveAccount, onDeleteAccount }) => {
                 {!['acc-cash', 'acc-bank', 'acc-card'].includes(acc.id) && (
                   <button
                     onClick={(e) => handleDelete(acc.id, e)}
-                    className="text-neutral-400 hover:text-black opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="border border-black bg-white text-black p-1 shadow-sm transition-transform active:scale-95 shrink-0"
                     title="Delete Account"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

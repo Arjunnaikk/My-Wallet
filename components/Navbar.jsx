@@ -77,14 +77,14 @@ const Navbar = ({ user, onLoginClick, onLogout, syncStatus }) => {
       
       {/* Branding */}
       <Link href="/" className="flex items-center gap-2">
-        <div className="h-8 w-8 bg-black dark:bg-white flex items-center justify-center">
-          <Wallet className="h-4.5 w-4.5 text-white dark:text-black" />
+        <div className="h-7 w-7 sm:h-8 sm:w-8 bg-black dark:bg-white flex items-center justify-center shrink-0">
+          <Wallet className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-white dark:text-black" />
         </div>
         <div>
-          <span className="font-black text-sm uppercase tracking-wider block">
+          <span className="font-black text-xs sm:text-sm uppercase tracking-wider block">
             My Wallet
           </span>
-          <span className="text-[9px] block text-neutral-400 dark:text-neutral-500 font-bold uppercase tracking-widest -mt-1">
+          <span className="text-[9px] hidden sm:block text-neutral-400 dark:text-neutral-500 font-bold uppercase tracking-widest -mt-1">
             Minimalist Ledger
           </span>
         </div>
@@ -224,7 +224,7 @@ const Navbar = ({ user, onLoginClick, onLogout, syncStatus }) => {
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-black border-t border-black dark:border-white px-2 py-1.5 flex justify-around items-center z-30 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-black border-t border-black dark:border-white px-1 py-1 flex justify-between items-center z-30 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] select-none">
         {links.map((link) => {
           const Icon = link.icon;
           const active = pathname === link.href;
@@ -232,15 +232,14 @@ const Navbar = ({ user, onLoginClick, onLogout, syncStatus }) => {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex flex-col items-center justify-center py-1 px-3 text-[10px] font-black uppercase tracking-wider transition-all gap-1 rounded-sm ${
+              className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 text-[8.5px] sm:text-[9px] font-black uppercase tracking-tight transition-all gap-1 rounded-sm text-center whitespace-nowrap overflow-hidden ${
                 active 
                   ? 'text-black dark:text-white bg-neutral-100 dark:bg-neutral-900 border border-black dark:border-white shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:shadow-[1px_1px_0px_0px_rgba(255,255,255,1)]' 
                   : 'text-neutral-500 dark:text-neutral-400 border border-transparent'
               }`}
-              style={{ minWidth: '60px' }}
             >
-              <Icon className="h-5 w-5" />
-              <span>{link.label}</span>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="truncate w-full">{link.label}</span>
             </Link>
           );
         })}
